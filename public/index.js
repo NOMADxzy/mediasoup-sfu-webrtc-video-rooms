@@ -29,6 +29,7 @@ function joinRoom(name, room_id) {
     rc = new RoomClient(localMedia, remoteVideos, remoteAudios, window.mediasoupClient, socket, room_id, name, roomOpen)
 
     addListeners()
+    document.getElementById('username').innerHTML = name
   }
 }
 

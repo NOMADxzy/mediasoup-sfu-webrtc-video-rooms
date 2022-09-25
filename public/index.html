@@ -8,7 +8,7 @@
         <script src="socket.io/socket.io.js"></script>
         <script src="modules/mediasoupclient.min.js"></script>
         <script src="modules/EventEmitter.min.js"></script>
-        <script src="https://kit.fontawesome.com/d2f1016e6f.js" crossorigin="anonymous"></script>
+<!--        <script src="https://kit.fontawesome.com/d2f1016e6f.js" crossorigin="anonymous"></script>-->
         <script src="RoomClient.js"></script>
 
         <link href="modules/bootstrap.min.css" rel="stylesheet" />
@@ -31,7 +31,7 @@
             <div id="control" class="hidden">
                 <br />
                 <button id="exitButton" class="hidden" onclick="rc.exit()">
-                    <i class="fas fa-arrow-left"></i> Exit
+                    <i class="fas fa-arrow-left"></i> 退出
                 </button>
                 <button id="copyButton" class="hidden" onclick="rc.copyURL()">
                     <i class="far fa-copy"></i> copy URL
@@ -73,6 +73,13 @@
                     <i class="fas fa-video"></i> Video:
                     <select id="videoSelect" class="form-select" style="width: auto"></select>
                 </div>
+
+                <i id = 'username'></i>
+                <input id="msgInput"/>
+                <button id="msgButton" onclick="rc.sendMessage()">
+                    <i class="fas fa-cogs"></i> Send Message
+                </button><br/>
+                <div id="msgHistory"></div>
                 <br />
             </div>
         </div>

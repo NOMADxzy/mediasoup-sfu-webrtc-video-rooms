@@ -259,6 +259,21 @@ class RoomClient {
         this.exit(true)
       }.bind(this)
     )
+    this.socket.on(
+      'msg', function (data) {
+        console.log(data)
+        let msgHistoryBox = document.getElementById('msgHistory')
+
+        let box = document.createElement('span')
+        let timeStr = new Date().toLocaleString()
+          let timebox = document.createElement('i')
+          timebox.innerHTML = `<b>${timeStr}</b>`
+        box.innerHTML = `${data[1][1]} ${data[1][0]} <br></br>`
+          msgHistoryBox.appendChild(timebox)
+        msgHistoryBox.appendChild(box)
+
+      }.bind(this)
+    )
   }
 
   //////// MAIN FUNCTIONS /////////////
@@ -629,6 +644,19 @@ class RoomClient {
       hide(devicesList)
       this.isDevicesVisible = false
     }
+  }
+  sendMessage() {
+    let inputbox = document.getElementById('msgInput')
+    let msgHistoryBox = document.getElementById('msgHistory')
+    this.socket.request('msg',[inputbox.value,this.name])
+
+    let box = document.createElement('span')
+    let timeStamp = +new Date()
+    let timeStr = new Date().toLocaleString()
+    box.innerHTML = `${timeStr} ${this.name} ${inputbox.value} <br></br>`
+    msgHistoryBox.appendChild(box)
+
+    inputbox.value = ''
   }
 
   handleFS(id) {

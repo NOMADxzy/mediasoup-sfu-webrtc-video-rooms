@@ -196,6 +196,13 @@ io.on('connection', (socket) => {
   socket.on('getMyRoomInfo', (_, cb) => {
     cb(roomList.get(socket.room_id).toJson())
   })
+  socket.on('msg', (msg, cb) => {
+    console.log(msg)
+    // console.log(roomList.get(socket.room_id))
+    console.log(socket)
+    roomList.get(socket.room_id).broadCast(socket.id, 'msg',
+        [socket.name,msg])
+  })
 
   socket.on('disconnect', () => {
     console.log('Disconnect', {

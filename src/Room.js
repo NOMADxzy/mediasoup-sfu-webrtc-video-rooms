@@ -94,10 +94,11 @@ module.exports = class Room {
         this.broadCast(socket_id, 'newProducers', [
           {
             producer_id: producer.id,
-            producer_socket_id: socket_id
+            producer_socket_id: socket_id,
           }
         ])
       }.bind(this)
+
     )
   }
 
@@ -148,6 +149,7 @@ module.exports = class Room {
     for (let otherID of Array.from(this.peers.keys()).filter((id) => id !== socket_id)) {
       this.send(otherID, name, data)
     }
+    // this.send(socket_id, name, data)//补
   }
 
   send(socket_id, name, data) {
