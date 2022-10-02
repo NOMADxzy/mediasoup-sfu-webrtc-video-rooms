@@ -9,6 +9,7 @@ const path = require('path')
 const Room = require('./Room')
 const Peer = require('./Peer')
 
+const spawn = require('child_process').spawn;
 const options = {
   key: fs.readFileSync(path.join(__dirname, config.sslKey), 'utf-8'),
   cert: fs.readFileSync(path.join(__dirname, config.sslCrt), 'utf-8')
@@ -113,7 +114,6 @@ io.on('connection', (socket) => {
 
     // send all the current producer to newly joined member
     let producerList = roomList.get(socket.room_id).getProducerListForPeer()
-
     socket.emit('newProducers', producerList)
   })
 
@@ -138,7 +138,7 @@ io.on('connection', (socket) => {
 
     try {
       const { params } = await roomList.get(socket.room_id).createWebRtcTransport(socket.id)
-
+      // const { params } = await roomList.get(socket.room_id).createPlainTransport({socket_id:socket.id})
       callback(params)
     } catch (err) {
       console.error(err)
@@ -147,6 +147,70 @@ io.on('connection', (socket) => {
       })
     }
   })
+  socket.on("createBroadCaster", async (_,callback)=>{
+    try {
+      const room = roomList.get(socket.room_id);
+      let creator = room.getPeers().get(socket.id).name
+      const bc_id = await room.createBroadcaster("broad1",creator);
+
+      callback({broadcaster_id:bc_id})
+  } catch (err) {
+    console.log(err);
+    callback({
+      error: err.message
+    })
+  }
+  })
+
+  socket.on("createBroadCasterProducer", async (_,callback)=>{
+    const room = roomList.get(socket.room_id);
+    let broadcaster = room.broadcasters.get(_.bc_id)
+
+    let VIDEO_PT = 101
+    let VIDEO_SSRC = Math.round(Math.random() * 10000000)
+    let AUDIO_SSRC = Math.round(Math.random() * 10000000)
+    let AUDIO_PT=100
+    let kind = "video"
+
+    let vid_rtpParameters = {
+      "codecs": [
+        { "mimeType":"video/vp8", "payloadType":VIDEO_PT, "clockRate":90000 }],
+      "encodings": [{ "ssrc":VIDEO_SSRC }] }
+    let aud_rtpParameters = {
+      "codecs": [
+          { "mimeType":"audio/opus", "payloadType":AUDIO_PT, "clockRate":48000, "channels":2, "parameters":{ "sprop-stereo":1 } }],
+      "encodings": [{ "ssrc":AUDIO_SSRC }] }
+
+    let res1 = await room.createPlainTransport(socket.id)
+    console.log("video transport params",res1.params)
+    broadcaster.transports.set(res1.params.id,res1.transport)
+    let rtpParameters = vid_rtpParameters
+    const vid_producer = await res1.transport.produce({kind, rtpParameters})
+    broadcaster.producers.set(vid_producer.id,vid_producer)
+
+    let res2 = await room.createPlainTransport(socket.id)
+    console.log("audio transport params",res2.params)
+    broadcaster.transports.set(res2.params.id,res2.transport)
+    rtpParameters = aud_rtpParameters
+    kind = "audio"
+    const aud_producer = await res2.transport.produce({kind, rtpParameters})
+    broadcaster.producers.set(aud_producer.id,aud_producer)
+
+    room.broadCast(null, 'newProducers', [
+          {
+            producer_id: vid_producer.id,
+            producer_socket_id: socket.id
+          },
+          {
+            producer_id: aud_producer.id,
+            producer_socket_id: socket.id
+          }
+        ])
+
+    let params = ['broad.sh',res1.params.ip,res1.params.port,res1.params.rtcpPort,res2.params.ip,res2.params.port,res2.params.rtcpPort];
+    spawn('bash', params).unref();
+      })
+
 
   socket.on('connectTransport', async ({ transport_id, dtlsParameters }, callback) => {
     console.log('Connect transport', { name: `${roomList.get(socket.room_id).getPeers().get(socket.id).name}` })
@@ -202,6 +266,9 @@ io.on('connection', (socket) => {
     console.log(socket)
     roomList.get(socket.room_id).broadCast(socket.id, 'msg',
         [socket.name,msg])
+  })
+  socket.on('fileshare', (src, cb) => {
+    console.log("fileshare")
   })
 
   socket.on('disconnect', () => {

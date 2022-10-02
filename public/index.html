@@ -65,6 +65,11 @@
                 <button id="stopScreenButton" class="hidden" onclick="rc.closeProducer(RoomClient.mediaType.screen)">
                     <i class="fas fa-desktop"></i> Close screen
                 </button>
+                <input type="file" onchange="rc.filechange(event)">
+                <button id="broadcaster" onclick="rc.runbroadcaster()">
+                    <i class="fas fa-desktop"></i> BroadCaster
+                </button>
+
                 <br /><br />
                 <div id="devicesList" class="hidden">
                     <i class="fas fa-microphone"></i> Audio:

@@ -17,9 +17,10 @@ const getLocalIp = () => {
   console.log(localIp)
   return localIp
 }
+const localIp = getLocalIp()
 
 module.exports = {
-  listenIp: '10.128.192.232',
+  listenIp: localIp,
   listenPort: 4443,
   sslCrt: '../ssl/cert.pem',
   sslKey: '../ssl/key.pem',
@@ -68,12 +69,21 @@ module.exports = {
     webRtcTransport: {
       listenIps: [
         {
-          ip: getLocalIp(),
-          announcedIp: '10.128.192.232' // replace by public IP address
+          ip: localIp,
+          announcedIp: localIp // replace by public IP address
         }
       ],
       maxIncomingBitrate: 1500000,
       initialAvailableOutgoingBitrate: 1000000
-    }
+    },
+    plainTransportOptions :
+		{
+			listenIp :
+			{
+				ip          : process.env.MEDIASOUP_LISTEN_IP || localIp,
+				announcedIp : process.env.MEDIASOUP_ANNOUNCED_IP
+			},
+			maxSctpMessageSize : 262144
+		}
   }
 }

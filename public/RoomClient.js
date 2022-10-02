@@ -1,7 +1,8 @@
 const mediaType = {
   audio: 'audioType',
   video: 'videoType',
-  screen: 'screenType'
+  screen: 'screenType',
+  file: 'filetype'
 }
 const _EVENTS = {
   exitRoom: 'exitRoom',
@@ -252,6 +253,39 @@ class RoomClient {
         }
       }.bind(this)
     )
+    this.socket.on(
+        'newPeer',
+        async function (data) {
+          console.log('New Peer', data)
+
+          if(data.creator){
+            //创建占位框
+          let elem = document.createElement('span')
+          elem.id = data.id
+          let img = document.createElement('img')
+          let desc = document.createElement('p')
+          let producebtn = document.createElement('button')
+          producebtn.innerHTML = "produce"
+          producebtn.onclick = ()=>{
+            this.socket.request('createBroadCasterProducer',{bc_id:data.id})
+          };
+
+          desc.innerHTML = data.creator + "创建的广播" + data.displayName
+          desc.appendChild(producebtn)
+
+          img.width = 640
+          img.height = 400
+          img.src = './broadcaster.jpg'
+          img.className = 'vid'
+
+
+          elem.appendChild(desc)
+          elem.appendChild(img)
+          document.getElementById("remoteVideos").appendChild(elem)
+          }
+
+        }.bind(this)
+    )
 
     this.socket.on(
       'disconnect',
@@ -278,10 +312,38 @@ class RoomClient {
 
   //////// MAIN FUNCTIONS /////////////
 
+  async runbroadcaster(){
+    const data = await this.socket.request('createBroadCaster',null)
+    console.log(data)
+  }
+
+  filechange(e){
+   const resultFile = e.target.files;
+   console.log(resultFile)
+   const aBlob = new Blob([resultFile[0]],{type:'video/mp4'})
+   const reader = new FileReader();
+   reader.onload=(ev)=>{
+      let elem
+      elem = document.createElement('video')
+      elem.src = ev.target.result
+      elem.id = "file"
+      elem.playsinline = false
+      elem.autoplay = true
+      elem.className = 'vid'
+      this.localMediaEl.appendChild(elem)
+      this.handleFS(elem.id)
+     // this.produce(elem.id)
+     this.socket.request("fileshare",{src:"hehe"})
+
+   }
+   reader.readAsDataURL(aBlob)
+ }
+
   async produce(type, deviceId = null) {
     let mediaConstraints = {}
     let audio = false
     let screen = false
+    let file = false
     switch (type) {
       case mediaType.audio:
         mediaConstraints = {
@@ -315,8 +377,22 @@ class RoomClient {
         mediaConstraints = false
         screen = true
         break
-      default:
-        return
+      default:// 文件
+        file = true
+        mediaConstraints = {
+          audio: true,
+          video: {
+            width: {
+              min: 640,
+              ideal: 1920
+            },
+            height: {
+              min: 400,
+              ideal: 1080
+            },
+            deviceId: deviceId
+          }
+        }
     }
     if (!this.device.canProduce('video') && !audio) {
       console.error('Cannot produce video')
@@ -329,12 +405,21 @@ class RoomClient {
     console.log('Mediacontraints:', mediaConstraints)
     let stream
     try {
-      stream = screen
+      if(file){
+        stream = document.querySelector('#'+type).captureStream();
+        stream.addTrack(new MediaStreamTrack())
+
+        console.log(stream.getVideoTracks())
+      }else {
+        stream = screen
         ? await navigator.mediaDevices.getDisplayMedia()
         : await navigator.mediaDevices.getUserMedia(mediaConstraints)
+      }
+
       console.log(navigator.mediaDevices.getSupportedConstraints())
 
       const track = audio ? stream.getAudioTracks()[0] : stream.getVideoTracks()[0]
+      console.log(track)
       const params = {
         track
       }

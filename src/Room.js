@@ -15,6 +15,7 @@ module.exports = class Room {
 
     this.peers = new Map()
     this.io = io
+    this.broadcasters = new Map()
   }
 
   addPeer(peer) {
@@ -69,7 +70,7 @@ module.exports = class Room {
 
     console.log('Adding transport', { transportId: transport.id })
     this.peers.get(socket_id).addTransport(transport)
-    return {
+    let res = {
       params: {
         id: transport.id,
         iceParameters: transport.iceParameters,
@@ -77,7 +78,70 @@ module.exports = class Room {
         dtlsParameters: transport.dtlsParameters
       }
     }
+    return res
   }
+
+  guid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+  async createBroadcaster(displayName, creator, rtpCapabilities){
+    if (typeof displayName !== 'string' || !displayName)
+      throw new TypeError('missing body.displayName');
+    else if (rtpCapabilities && typeof rtpCapabilities !== 'object')
+      throw new TypeError('wrong body.rtpCapabilities');
+
+    let id = this.guid()
+    const broadcaster = {
+      id,
+      creator,
+      displayName,
+      rtpCapabilities,
+      transports : new Map(),
+      producers : new Map(),
+      consumers : new Map()
+    }
+    this.broadcasters.set(id,broadcaster)
+    this.broadCast(null,"newPeer",{id,displayName,creator})
+    return id
+  }
+
+  async createPlainTransport(
+			socket_id,
+			rtcpMux = false,
+			comedia = true,
+			sctpCapabilities)
+	{
+		const peer = this.peers.get(socket_id);
+
+		if (!peer)
+			throw new Error(`peer with id "${socket_id}" does not exist`);
+
+		const plainTransportOptions =
+        {
+            ...config.mediasoup.plainTransportOptions,
+            rtcpMux : rtcpMux,
+            comedia : comedia
+        };
+
+        const transport = await this.router.createPlainTransport(
+            plainTransportOptions);
+
+        // Store it.
+
+        return {
+              params:{
+                id       : transport.id,
+                ip       : transport.tuple.localIp,
+                port     : transport.tuple.localPort,
+                rtcpPort : transport.rtcpTuple ? transport.rtcpTuple.localPort : undefined
+              },
+          transport
+        };
+	}
 
   async connectPeerTransport(socket_id, transport_id, dtlsParameters) {
     if (!this.peers.has(socket_id)) return
@@ -145,8 +209,8 @@ module.exports = class Room {
     this.peers.get(socket_id).closeProducer(producer_id)
   }
 
-  broadCast(socket_id, name, data) {
-    for (let otherID of Array.from(this.peers.keys()).filter((id) => id !== socket_id)) {
+  broadCast(exclude, name, data) {
+    for (let otherID of Array.from(this.peers.keys()).filter((id) => id !== exclude)) {
       this.send(otherID, name, data)
     }
     // this.send(socket_id, name, data)//补
