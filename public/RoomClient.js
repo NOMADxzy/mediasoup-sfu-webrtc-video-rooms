@@ -264,9 +264,10 @@ class RoomClient {
           elem.id = data.id
           let img = document.createElement('img')
           let desc = document.createElement('p')
-          let producebtn = document.createElement('button')
-          producebtn.innerHTML = "produce"
-          producebtn.onclick = ()=>{
+          let producebtn = document.createElement('input')
+          producebtn.innerHTML = "produce";
+          producebtn.type = "file"
+          producebtn.onchange = ()=>{
             this.socket.request('createBroadCasterProducer',{bc_id:data.id})
           };
 
@@ -338,6 +339,25 @@ class RoomClient {
    }
    reader.readAsDataURL(aBlob)
  }
+
+  async shareproducer() {
+    let pid = document.getElementById("share_producer_id").value;
+    let rid = document.getElementById("share_room_id").value;
+    console.log("将" + pid + "分享到房间" + rid)
+    let data = await this.socket.request("shareProducer", {pid: pid, rid: rid})
+    console.log(data)
+  }
+
+  updateproduceroptions(e) {//更新选择producer的列表
+    const vid_elems = document.getElementsByClassName('vid')
+    for (let i = 0; i < vid_elems.length; i++) {
+      let option = document.createElement("option")
+      option.value = vid_elems[i].name;
+      option.innerHTML = vid_elems[i].name;
+      e.target.appendChild(option)
+    }
+
+  }
 
   async produce(type, deviceId = null) {
     let mediaConstraints = {}
@@ -457,6 +477,7 @@ class RoomClient {
         elem = document.createElement('video')
         elem.srcObject = stream
         elem.id = producer.id
+        elem.name = producer.id
         elem.playsinline = false
         elem.autoplay = true
         elem.className = 'vid'
@@ -522,6 +543,7 @@ class RoomClient {
           elem = document.createElement('video')
           elem.srcObject = stream
           elem.id = consumer.id
+          elem.name = producer_id
           elem.playsinline = false
           elem.autoplay = true
           elem.className = 'vid'
@@ -531,6 +553,7 @@ class RoomClient {
           elem = document.createElement('audio')
           elem.srcObject = stream
           elem.id = consumer.id
+          elem.name = producer_id
           elem.playsinline = false
           elem.autoplay = true
           this.remoteAudioEl.appendChild(elem)

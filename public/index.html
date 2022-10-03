@@ -65,10 +65,15 @@
                 <button id="stopScreenButton" class="hidden" onclick="rc.closeProducer(RoomClient.mediaType.screen)">
                     <i class="fas fa-desktop"></i> Close screen
                 </button>
-                <input type="file" onchange="rc.filechange(event)">
+
                 <button id="broadcaster" onclick="rc.runbroadcaster()">
                     <i class="fas fa-desktop"></i> BroadCaster
-                </button>
+                </button><br/>
+<!--                <input id="share_producer_id" type="text" >-->
+                <em>选择</em><select id="share_producer_id" onfocus="rc.updateproduceroptions(event)">
+                </select>
+                <input placeholder="目标房间" type="text" id="share_room_id">
+                <button onclick="rc.shareproducer()">分享</button>
 
                 <br /><br />
                 <div id="devicesList" class="hidden">

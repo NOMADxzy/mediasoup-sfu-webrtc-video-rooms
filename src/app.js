@@ -19,6 +19,9 @@ const httpsServer = https.createServer(options, app)
 const io = require('socket.io')(httpsServer)
 
 app.use(express.static(path.join(__dirname, '..', 'public')))
+app.get("/roomlist", (req,res)=>{
+  res.json(roomList)
+})
 
 httpsServer.listen(config.listenPort, () => {
   console.log('Listening on https://' + config.listenIp + ':' + config.listenPort)
@@ -167,8 +170,8 @@ io.on('connection', (socket) => {
     let broadcaster = room.broadcasters.get(_.bc_id)
 
     let VIDEO_PT = 101
-    let VIDEO_SSRC = Math.round(Math.random() * 10000000)
-    let AUDIO_SSRC = Math.round(Math.random() * 10000000)
+    let VIDEO_SSRC = 2222
+    let AUDIO_SSRC = 1111
     let AUDIO_PT=100
     let kind = "video"
 
@@ -182,14 +185,14 @@ io.on('connection', (socket) => {
       "encodings": [{ "ssrc":AUDIO_SSRC }] }
 
     let res1 = await room.createPlainTransport(socket.id)
-    console.log("video transport params",res1.params)
+    // console.log("video transport params",res1.params)
     broadcaster.transports.set(res1.params.id,res1.transport)
     let rtpParameters = vid_rtpParameters
     const vid_producer = await res1.transport.produce({kind, rtpParameters})
     broadcaster.producers.set(vid_producer.id,vid_producer)
 
     let res2 = await room.createPlainTransport(socket.id)
-    console.log("audio transport params",res2.params)
+    // console.log("audio transport params",res2.params)
     broadcaster.transports.set(res2.params.id,res2.transport)
     rtpParameters = aud_rtpParameters
     kind = "audio"
@@ -208,8 +211,27 @@ io.on('connection', (socket) => {
         ])
 
     let params = ['broad.sh',res1.params.ip,res1.params.port,res1.params.rtcpPort,res2.params.ip,res2.params.port,res2.params.rtcpPort];
+    console.log("bash params: ",params)
     spawn('bash', params).unref();
       })
+
+  socket.on('shareProducer', async (_,callback) => {
+    let listenIp = "10.128.161.59";
+    const room1 = roomList.get(socket.room_id)
+
+    let producerId = _.pid;
+    const room2 = roomList.get(_.rid)
+    let router = room2.router;
+
+    // const transport = await room.router.createPipeTransport({listenIp})
+    let res = await room1.router.pipeToRouter({producerId,router});
+    callback(res)//将pipetransport生成的producer和consumer返回给客户端
+
+    room2.broadCast(null,"newProducers",[{//目标房间广播新的producer
+      producer_id: producerId,
+      producer_socket_id: socket.id
+    }])
+  })
 
 
   socket.on('connectTransport', async ({ transport_id, dtlsParameters }, callback) => {
